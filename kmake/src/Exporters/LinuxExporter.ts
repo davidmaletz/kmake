@@ -283,7 +283,7 @@ export class LinuxExporter extends Exporter {
 
 		let incline = '-I./ '; // local directory to pick up the precompiled header hxcpp.h.gch
 		for (let inc of project.getIncludeDirs()) {
-			inc = path.relative(outputPath, path.resolve(from, inc));
+			inc = path.relative(outputPath, path.resolve(from, inc)).replace(/\\/g, '/');
 			incline += '-I' + inc + ' ';
 		}
 		this.p('INC=' + incline);
@@ -293,7 +293,11 @@ export class LinuxExporter extends Exporter {
 			libsline += ' -static';
 		}
 		for (let lib of project.getLibs()) {
-			libsline += ' -l' + lib;
+            if(lib.indexOf('\\') != -1){
+                let p = path.relative(outputPath, path.resolve(from, lib));
+                libsline += " -L"+path.dirname(p).replace(/\\/g, '/');
+                libsline += " -l"+path.basename(p, '.so').replace("lib","");
+            } else libsline += ' -l' + lib;
 		}
 		this.p('LIB=' + libsline);
 
@@ -309,9 +313,7 @@ export class LinuxExporter extends Exporter {
 
 			defline += '-D' + def.value.replace(/\"/g, '\\"') + ' ';
 		}
-		if (!options.debug) {
 			defline += '-DNDEBUG ';
-		}
 		this.p('DEF=' + defline);
 		this.p();
 
@@ -366,10 +368,10 @@ export class LinuxExporter extends Exporter {
 		}
 
 		if (options.lib) {
-			this.p('\t' + 'ar rcs ' + output + ' ' + ofilelist);
+			this.p('\t' + 'ar rcs ' + output + ' ' + ofilelist+ ' -Wl,-rpath,\'$$ORIGIN\' $(LIB)');
 		}
 		else {
-			this.p('\t' + cppCompiler + ' ' + output + ' ' + cpp + ' ' + optimization + ' ' + ofilelist + ' $(LIB)');
+			this.p('\t' + (options.lib ? 'ar rcs' : cppCompiler) + ' ' + output + ' ' + cpp + ' ' + optimization + ' ' + ofilelist + ' -Wl,-rpath,\'$$ORIGIN\' $(LIB)');
 		}
 
 		for (let file of project.getFiles()) {
@@ -381,7 +383,7 @@ export class LinuxExporter extends Exporter {
 				}
 			}
 			if (precompiledHeader !== null) {
-				let realfile = path.relative(outputPath, path.resolve(from, file.file));
+				let realfile = path.relative(outputPath, path.resolve(from, file.file)).replace(/\\/g, '/');
 				this.p('-include ' + path.basename(file.file) + '.d');
 				this.p(path.basename(realfile) + '.gch: ' + realfile);
 				this.p('\t' + cppCompiler + ' ' + cpp + ' ' + optimization + ' $(INC) $(DEF) -MD -c ' + realfile + ' -o ' + path.basename(file.file) + '.gch');
@@ -393,7 +395,7 @@ export class LinuxExporter extends Exporter {
 			if (file.endsWith('.c') || file.endsWith('.cpp') || file.endsWith('.cc') || file.endsWith('.s') || file.endsWith('.S')) {
 				this.p();
 				let name = ofiles[file];
-				let realfile = path.relative(outputPath, path.resolve(from, file));
+				let realfile = path.relative(outputPath, path.resolve(from, file)).replace(/\\/g, '/');
 
 				this.p('-include ' + name + '.d');
 

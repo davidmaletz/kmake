@@ -88,7 +88,7 @@ export class VisualStudioExporter extends Exporter {
 		this.p('<Project ToolsVersion="' + this.toolsVersion() + '" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">');
 		this.p('<PropertyGroup>', 1);
 		if (platform === Platform.Windows) {
-			this.p('<LocalDebuggerWorkingDirectory>' + this.getDebugDir(from, project) + '</LocalDebuggerWorkingDirectory>', 2);
+            		this.p('<LocalDebuggerWorkingDirectory>' + path.resolve(from, 'assets').replace(/\//g, '\\') + '</LocalDebuggerWorkingDirectory>', 2);
 			this.p('<DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>', 2);
 			if (project.cmdArgs.length > 0) {
 				this.p('<LocalDebuggerCommandArguments>' + project.cmdArgs.join(' ') + '</LocalDebuggerCommandArguments>', 2);
@@ -258,7 +258,9 @@ export class VisualStudioExporter extends Exporter {
 		}
 		else if (platform === Platform.Windows) {
 			this.exportResourceScript(to);
-			await Icon.exportIco(project.icon, path.resolve(to, 'icon.ico'), from);
+		    if(project.icon != null && project.icon.endsWith('.ico')) fs.copyFileSync(project.icon, path.resolve(to, 'icon.ico'));
+		    else await Icon.exportIco(project.icon, path.resolve(to, 'icon.ico'), from);
+			
 		}
 		else {
 			await this.additionalFiles(Icon, from, to, project, platform);
